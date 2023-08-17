@@ -80,7 +80,7 @@ function wpsw_sync_worker() {
                                 'src' => $prod_dataitem['picture'],
                             ],
                         ],
-                        'stock_quantity' => $prod_dataitem['in_stock'] ? 1 : 0,
+                        'stock_quantity' => $prod_dataitem['in_stock']
                     ];
                 
                     // Create or update the product based on SKU presence
