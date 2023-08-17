@@ -14,6 +14,12 @@
 defined( 'ABSPATH' ) || exit;
 
 
+function add_additonal_wc_mime_types($mime_types) {
+    $mime_types['webp'] = 'image/webp';
+    return $mime_types;
+}
+add_filter('woocommerce_rest_allowed_image_mime_types', 'add_additonal_wc_mime_types', 1, 1);
+
 /**
  * Setting up a WP Cron 
  *  */
@@ -38,32 +44,38 @@ function wpsw_sync_worker() {
     for ($retry = 1; $retry <= $max_retries; $retry++) {
 
 		// setting timeout to 20 seconds for the request to be processed
-        $response = wp_safe_remote_get($products_ext);//, array('timeout' => 20));
+        $response = wp_safe_remote_get($products_ext, array('timeout' => 20));
 
         if (is_wp_error($response)) {
         
 			// log error
             error_log('Error retrieving JSON data: ' . $response->get_error_message());
 
+            continue;
             // schedule the next retry
-            $next_retry = time() + (60 * $retry * $retry); // exponential backoff
-            wp_schedule_single_event($next_retry, 'wpsw_sync_event');
-
-            return;
+            // $next_retry = time() + (60 * $retry * $retry); // exponential backoff
+            // wp_schedule_single_event($next_retry, 'wpsw_sync_event');
+            // return;
         }
 
         // convert JSON and proceed to processing it
         $prod_data = json_decode(wp_remote_retrieve_body($response), true);
-		$valid_message = isset($data_json['message']) && $data_json['message'] === 'OK';
+		$valid_message = isset($prod_data['message']) && $prod_data['message'] === 'OK';
 
         if ($valid_message) {
             // Update WooCommerce products based on $prod_data
 
             // If successful, break out of the loop
 
-            $prod_data_body = $prod_data['data'] ?? false;
+            $prod_data_body = $prod_data['data'] ?? array();
 
-            if ($prod_data_body) {
+            if ( is_array($prod_data_body) && count($prod_data_body) ) {
+
+                $product_load = array(
+                    'create' => array(),
+                    'update' => array(),
+                    'delete' => array()
+                );
 
                 foreach ($prod_data_body as $prod_dataitem) {
                     // Check if the product exists based on SKU
@@ -75,7 +87,7 @@ function wpsw_sync_worker() {
                         'name' => $prod_dataitem['name'],
                         'description' => $prod_dataitem['description'],
                         'regular_price' => $prod_dataitem['price'],
-                        'images' => [
+                        'images' => [       
                             [
                                 'src' => $prod_dataitem['picture'],
                             ],
@@ -102,7 +114,6 @@ function wpsw_sync_worker() {
                     echo 'Product ' . $action . ' with SKU: ' . $product['sku'] . '<br>';
                 }
 
-                // echo '</pre>';
             } else {
                 // data body is absent
                 error_log('Error retrieving JSON data: data array is undefined');
@@ -115,7 +126,7 @@ function wpsw_sync_worker() {
         }
     }
 }
-add_action( 'wpsw_sync_event', 'wpsw_sync_worker' );
+//add_action( 'wpsw_sync_event', 'wpsw_sync_worker' );
 
 
 /**
