@@ -35,11 +35,11 @@ add_action( 'wp', 'wpsw_sync_worker' );
 
 function wpsw_sync_worker() {
 	
-    $products_ext = 'https://wp.webspark.dev/wp-api/products';
-    $max_retries = 5; // count 20% failed requests
+    // Woocommerce REST API client initialization
+    require_once(__DIR__ . '/wpsw_woo_api.php'); 
 
-	// Woocommerce REST API client initialization
-	require_once(__DIR__ . '/wpsw_woo_api.php');    
+    $products_ext = 'https://wp.webspark.dev/wp-api/products';
+    $max_retries = 5; // count 20% failed requests   
     
     for ($retry = 1; $retry <= $max_retries; $retry++) {
 
@@ -71,47 +71,51 @@ function wpsw_sync_worker() {
 
             if ( is_array($prod_data_body) && count($prod_data_body) ) {
 
-                $product_load = array(
-                    'create' => array(),
-                    'update' => array(),
-                    'delete' => array()
-                );
+                // $product_load = array(
+                //     'create' => array(),
+                //     'update' => array(),
+                //     'delete' => array()
+                // );
 
                 foreach ($prod_data_body as $prod_dataitem) {
                     // Check if the product exists based on SKU
                     $existing_product = $woocommerce->get('products', ['sku' => $prod_dataitem['sku']]);
                 
                     // Prepare product data
-                    $product = [
-                        'sku' => $prod_dataitem['sku'],
-                        'name' => $prod_dataitem['name'],
-                        'description' => $prod_dataitem['description'],
-                        'regular_price' => $prod_dataitem['price'],
-                        'images' => [       
-                            [
-                                'src' => $prod_dataitem['picture'],
-                            ],
-                        ],
-                        'stock_quantity' => $prod_dataitem['in_stock']
-                    ];
-                
+                    // $product = [
+                    //     'sku' => $prod_dataitem['sku'],
+                    //     'name' => $prod_dataitem['name'],
+                    //     'description' => $prod_dataitem['description'],
+                    //     'regular_price' => $prod_dataitem['price'],
+                    //     'images' => [       
+                    //         [
+                    //             'src' => uploadImagetoMedia($prod_dataitem['picture']),
+                    //         ],
+                    //     ],
+                    //     'stock_quantity' => $prod_dataitem['in_stock']
+                    // ];
+                    echo '<pre>';
+                    var_dump( uploadImagetoMedia($prod_dataitem['picture']) );
+                    echo '</pre>';
+                    return;
+
                     // Create or update the product based on SKU presence
-                    if (empty($existing_product)) {
+                    // if (empty($existing_product)) {
                         
-                        // SKU not found, create a new product
-                        $woocommerce->post('products', $product);
-                        $action = 'created';
+                    //     // SKU not found, create a new product
+                    //     $woocommerce->post('products', $product);
+                    //     $action = 'created';
 
-                    } else {
+                    // } else {
                         
-                        // SKU found, update the existing product
-                        $product['id'] = $existing_product[0]->id;
-                        $woocommerce->put('products/' . $product['id'], $product);
-                        $action = 'updated';
+                    //     // SKU found, update the existing product
+                    //     $product['id'] = $existing_product[0]->id;
+                    //     $woocommerce->put('products/' . $product['id'], $product);
+                    //     $action = 'updated';
 
-                    }
+                    // }
                 
-                    echo 'Product ' . $action . ' with SKU: ' . $product['sku'] . '<br>';
+                    // echo 'Product ' . $action . ' with SKU: ' . $product['sku'] . '<br>';
                 }
 
             } else {
@@ -120,13 +124,53 @@ function wpsw_sync_worker() {
                 return;
             }
 
-			
-
             break;
         }
     }
 }
 //add_action( 'wpsw_sync_event', 'wpsw_sync_worker' );
+
+require_once ABSPATH . 'wp-admin/includes/media.php';
+require_once ABSPATH . 'wp-admin/includes/file.php';
+require_once ABSPATH . 'wp-admin/includes/image.php';
+
+function uploadImagetoMedia($src) {
+
+    // $image_data = base64_encode(file_get_contents($src)); //get image content
+
+    // $response = wp_remote_post(get_site_url() . '/wp-json/wp/v2/media', array(
+    //     'headers'     => array(
+    //         'Authorization' => 'Bearer mZSJxnrC2XIMX65esJ5VuYq7',
+    //         'Content-Type' => 'application/json',
+    //     ),
+    //     'body'        => json_encode(array(
+    //         'file' => $image_data
+    //     )),
+    // ));
+    
+    // if (is_wp_error($response)) {
+    //     // if upload failed
+    //     $error_message = $response->get_error_message();
+    //     echo "Error uploading image: $error_message";
+    // } else {
+    //     $response_data = json_decode(wp_remote_retrieve_body($response), true);
+    //     echo 'Image uploaded:', print_r($response_data, true);
+    // }
+
+    
+
+        $res = wp_safe_remote_get($src)['http_response'];//media_sideload_image( $src, 0, '', 'id' );
+
+        $reflFirst = new ReflectionClass($res);
+        $reflRes = $reflFirst->getProperty('response');
+        $reflRes->setAccessible(true);
+
+        $reflInner = new ReflectionClass($reflRes->getValue($res));
+        
+
+    return $reflRes->getValue($res)->url;
+
+}
 
 
 /**
