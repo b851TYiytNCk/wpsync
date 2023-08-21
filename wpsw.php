@@ -90,52 +90,52 @@ function wpsw_sync_worker() {
                 });
 
                 echo '<pre>';
-                var_dump( $new_products );
+                //var_dump( $new_products );
                 echo '</pre>';
 
                 $total_new_p = count($new_products);
 
-                // if ( $total_new_p ) {
-                //     $batch_size = 5;
+                if ( $total_new_p ) {
+                    $batch_size = 5;
 
-                //     for ($srt_index = 0; $srt_index < $total_new_p; $srt_index += $batch_size) {
-                //         $batch_pr = array_slice($new_products, $srt_index, $batch_size);
+                    for ($srt_index = 0; $srt_index <= $batch_size; $srt_index += $batch_size) {
+                        $batch_pr = array_slice($new_products, $srt_index, $batch_size);
 
-                //         $new_pr_to_load = array();
+                        $new_pr_to_load = array();
 
-                //         foreach ($batch_pr as $new_pr) {
+                        foreach ($batch_pr as $new_pr) {
                             
-                //             $pr_data = [
-                //                 'sku' => $new_pr['sku'],
-                //                 'name' => $new_pr['name'],
-                //                 'description' => $new_pr['description'],
-                //                 'regular_price' => $new_pr['price'],
-                //                 'images' => [       
-                //                     [
-                //                         'src' => upload_image_to_media($new_pr['picture']),
-                //                     ],
-                //                 ],
-                //                 'stock_quantity' => $new_pr['in_stock']
-                //             ];
+                            $pr_data = [
+                                'sku' => $new_pr['sku'],
+                                'name' => $new_pr['name'],
+                                'description' => $new_pr['description'],
+                                'regular_price' => $new_pr['price'],
+                                'images' => [       
+                                    [
+                                        'src' => upload_image_to_media($new_pr['picture']),
+                                    ],
+                                ],
+                                'stock_quantity' => $new_pr['in_stock']
+                            ];
 
-                //             $new_pr_to_load["create"][] = $pr_data;
-                //         }
+                            $new_pr_to_load["create"][] = $pr_data;
+                        }
                         
 
-                //         if (count($new_pr_to_load)) {
-                //             $pr_upload = $woocommerce->post('products/batch', $new_pr_to_load);
+                        if (count($new_pr_to_load)) {
+                            $pr_upload = $woocommerce->post('products/batch', $new_pr_to_load);
     
-                //             if (is_wp_error($pr_upload)) {
-                //                 error_log('WP Error: ' . $response->get_error_message());
-                //                 break;
-                //             } else {
-                //                 var_dump( $pr_upload );
-                //             }
-                //         }
+                            if (is_wp_error($pr_upload)) {
+                                error_log('WP Error: ' . $response->get_error_message());
+                                break;
+                            } else {
+                                var_dump( $pr_upload );
+                            }
+                        }
 
-                //     }
+                    }
 
-                // }
+                }
 
                 // echo '<pre>';
                 // var_dump( $new_products );
@@ -212,7 +212,7 @@ function upload_image_to_media($src) {
     $reflInner = new ReflectionClass($reflRes->getValue($res));
     
     $url_to_download = $reflRes->getValue($res)->url;
-    $image_data = media_sideload_image( $url_to_download, 0, '', 'id' ); //get image content
+    $image_data = media_sideload_image( $url_to_download, 0, '', 'src' ); //get image content
 
     return $image_data;
 
